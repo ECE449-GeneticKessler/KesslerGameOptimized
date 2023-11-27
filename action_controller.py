@@ -31,7 +31,6 @@ def setup_action_controller(chromosome):
 
     # insert rule set here after we determine the chromosome
 
-
     rules = []
 
     action_ctrl = ctrl.ControlSystem(rules)
