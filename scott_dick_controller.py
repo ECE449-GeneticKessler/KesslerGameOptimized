@@ -31,19 +31,45 @@ class ScottDickController(KesslerController):
         theta_delta = ctrl.Antecedent(np.arange(-1*math.pi,math.pi,0.1), 'theta_delta') # Radians due to Python
         ship_turn = ctrl.Consequent(np.arange(-180,180,1), 'ship_turn') # Degrees due to Kessler
         ship_fire = ctrl.Consequent(np.arange(-1,1,0.1), 'ship_fire')
+        ship_thrust = ctrl.Consequent(np.arange(0, 200, 5), 'ship_thrust')
+
         
         #Declare fuzzy sets for bullet_time (how long it takes for the bullet to reach the intercept point)
         bullet_time['S'] = fuzz.trimf(bullet_time.universe,[0,0,0.05])
         bullet_time['M'] = fuzz.trimf(bullet_time.universe, [0,0.05,0.1])
         bullet_time['L'] = fuzz.smf(bullet_time.universe,0.0,0.1)
-        
+
+        ship_thrust['Low'] = fuzz.trimf(ship_thrust.universe, [0, 0, 50])
+        ship_thrust['Medium'] = fuzz.trimf(ship_thrust.universe, [0, 100, 200])
+        ship_thrust['High'] = fuzz.trimf(ship_thrust.universe, [100, 200, 200])
+
+        # Enhanced fuzzy sets for theta_delta
+        # theta_delta['VNL'] = fuzz.zmf(theta_delta.universe, -math.pi, -math.pi/2)  # Very Negative Large
+        # theta_delta['NL'] = fuzz.trimf(theta_delta.universe, [-math.pi/2, -math.pi/3, -math.pi/6])
+        # theta_delta['NS'] = fuzz.trimf(theta_delta.universe, [-math.pi/3, -math.pi/6, 0])
+        # theta_delta['Z'] = fuzz.trimf(theta_delta.universe, [-math.pi/6, 0, math.pi/6])
+        # theta_delta['PS'] = fuzz.trimf(theta_delta.universe, [0, math.pi/6, math.pi/3])
+        # theta_delta['PL'] = fuzz.trimf(theta_delta.universe, [math.pi/6, math.pi/3, math.pi/2])
+        # theta_delta['VPL'] = fuzz.smf(theta_delta.universe, math.pi/2, math.pi)  # Very Positive Large
+
         #Declare fuzzy sets for theta_delta (degrees of turn needed to reach the calculated firing angle)
         theta_delta['NL'] = fuzz.zmf(theta_delta.universe, -1*math.pi/3,-1*math.pi/6)
         theta_delta['NS'] = fuzz.trimf(theta_delta.universe, [-1*math.pi/3,-1*math.pi/6,0])
         theta_delta['Z'] = fuzz.trimf(theta_delta.universe, [-1*math.pi/6,0,math.pi/6])
         theta_delta['PS'] = fuzz.trimf(theta_delta.universe, [0,math.pi/6,math.pi/3])
         theta_delta['PL'] = fuzz.smf(theta_delta.universe,math.pi/6,math.pi/3)
-        
+
+        # Enhanced fuzzy sets for ship_turn
+        # ship_turn['VNL'] = fuzz.trimf(ship_turn.universe, [-180, -180, -90])  # Very Negative Large
+        # ship_turn['NL'] = fuzz.trimf(ship_turn.universe, [-120, -90, -60])
+        # ship_turn['NS'] = fuzz.trimf(ship_turn.universe, [-90, -60, -30])
+        # ship_turn['Z'] = fuzz.trimf(ship_turn.universe, [-30, 0, 30])
+        # ship_turn['PS'] = fuzz.trimf(ship_turn.universe, [30, 60, 90])
+        # ship_turn['PL'] = fuzz.trimf(ship_turn.universe, [60, 90, 120])
+        # ship_turn['VPL'] = fuzz.trimf(ship_turn.universe, [90, 120, 150])
+        # ship_turn['VPL'] = fuzz.trimf(ship_turn.universe, [120, 150, 180])  # Very Positive Large
+        # ship_turn['VPL'] = fuzz.trimf(ship_turn.universe, [180, 180, 180])  
+
         #Declare fuzzy sets for the ship_turn consequent; this will be returned as turn_rate.
         ship_turn['NL'] = fuzz.trimf(ship_turn.universe, [-180,-180,-30])
         ship_turn['NS'] = fuzz.trimf(ship_turn.universe, [-90,-30,0])
@@ -57,22 +83,22 @@ class ScottDickController(KesslerController):
         ship_fire['Y'] = fuzz.trimf(ship_fire.universe, [0.0,1,1]) 
                 
         #Declare each fuzzy rule
-        rule1 = ctrl.Rule(bullet_time['L'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['N']))
-        rule2 = ctrl.Rule(bullet_time['L'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y']))
-        rule3 = ctrl.Rule(bullet_time['L'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y']))
-        rule4 = ctrl.Rule(bullet_time['L'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y']))
-        rule5 = ctrl.Rule(bullet_time['L'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['N']))   
-        rule6 = ctrl.Rule(bullet_time['M'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['N']))
-        rule7 = ctrl.Rule(bullet_time['M'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y']))
-        rule8 = ctrl.Rule(bullet_time['M'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y']))    
-        rule9 = ctrl.Rule(bullet_time['M'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y']))
-        rule10 = ctrl.Rule(bullet_time['M'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['N']))
-        rule11 = ctrl.Rule(bullet_time['S'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['Y']))
-        rule12 = ctrl.Rule(bullet_time['S'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y']))
-        rule13 = ctrl.Rule(bullet_time['S'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y']))
-        rule14 = ctrl.Rule(bullet_time['S'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y']))
-        rule15 = ctrl.Rule(bullet_time['S'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['Y']))
-     
+        rule1 = ctrl.Rule(bullet_time['L'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['N'], ship_thrust['High']))
+        rule2 = ctrl.Rule(bullet_time['L'] & theta_delta['NS'], (ship_turn['NL'], ship_fire['N'], ship_thrust['High']))
+        rule3 = ctrl.Rule(bullet_time['L'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'], ship_thrust['Medium']))
+        rule4 = ctrl.Rule(bullet_time['L'] & theta_delta['PS'], (ship_turn['PL'], ship_fire['N'], ship_thrust['High']))
+        rule5 = ctrl.Rule(bullet_time['L'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['N'], ship_thrust['High']))   
+        rule6 = ctrl.Rule(bullet_time['M'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['N'], ship_thrust['High']))
+        rule7 = ctrl.Rule(bullet_time['M'] & theta_delta['NS'], (ship_turn['NL'], ship_fire['Y'], ship_thrust['Medium']))
+        rule8 = ctrl.Rule(bullet_time['M'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'], ship_thrust['Medium']))    
+        rule9 = ctrl.Rule(bullet_time['M'] & theta_delta['PS'], (ship_turn['PL'], ship_fire['Y'], ship_thrust['Medium']))
+        rule10 = ctrl.Rule(bullet_time['M'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['N'], ship_thrust['High']))
+        rule11 = ctrl.Rule(bullet_time['S'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['N'], ship_thrust['Medium']))
+        rule12 = ctrl.Rule(bullet_time['S'] & theta_delta['NS'], (ship_turn['NL'], ship_fire['Y'], ship_thrust['Medium']))
+        rule13 = ctrl.Rule(bullet_time['S'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'], ship_thrust['Low']))
+        rule14 = ctrl.Rule(bullet_time['S'] & theta_delta['PS'], (ship_turn['PL'], ship_fire['Y'], ship_thrust['Medium']))
+        rule15 = ctrl.Rule(bullet_time['S'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['N'], ship_thrust['Medium']))
+
         #DEBUG
         #bullet_time.view()
         #theta_delta.view()
@@ -101,6 +127,12 @@ class ScottDickController(KesslerController):
         self.targeting_control.addrule(rule13)
         self.targeting_control.addrule(rule14)
         self.targeting_control.addrule(rule15)
+        # self.targeting_control.addrule(rule16)
+        # self.targeting_control.addrule(rule17)
+        # self.targeting_control.addrule(rule18)
+        # self.targeting_control.addrule(rule19)
+        # self.targeting_control.addrule(rule20)
+        # self.targeting_control.addrule(rule21)
         
         
 
@@ -129,7 +161,15 @@ class ScottDickController(KesslerController):
         ship_pos_x = ship_state["position"][0]     # See src/kesslergame/ship.py in the KesslerGame Github
         ship_pos_y = ship_state["position"][1]       
         closest_asteroid = None
+        vel = ship_state['speed']
+        heading = ship_state['heading']
+
+        print("Ship Velocity %f" %vel)
+        print("Ship is heading %f" %heading)
+
         
+        thrust = ship_state["speed"]
+
         for a in game_state["asteroids"]:
             #Loop through all asteroids, find minimum Eudlidean distance
             curr_dist = math.sqrt((ship_pos_x - a["position"][0])**2 + (ship_pos_y - a["position"][1])**2)
@@ -166,11 +206,11 @@ class ScottDickController(KesslerController):
         bullet_speed = 800 # Hard-coded bullet speed from bullet.py
         
         # Determinant of the quadratic formula b^2-4ac
-        targ_det = (-2 * closest_asteroid["dist"] * asteroid_vel * cos_my_theta2)**2 - (4*(asteroid_vel**2 - bullet_speed**2) * closest_asteroid["dist"])
+        targ_det = (-2 * closest_asteroid["dist"] * asteroid_vel * cos_my_theta2)**2 - (4*(asteroid_vel**2 - (bullet_speed+vel)**2) * (closest_asteroid["dist"])**2)
         
         # Combine the Law of Cosines with the quadratic formula for solve for intercept time. Remember, there are two values produced.
-        intrcpt1 = ((2 * closest_asteroid["dist"] * asteroid_vel * cos_my_theta2) + math.sqrt(targ_det)) / (2 * (asteroid_vel**2 -bullet_speed**2))
-        intrcpt2 = ((2 * closest_asteroid["dist"] * asteroid_vel * cos_my_theta2) - math.sqrt(targ_det)) / (2 * (asteroid_vel**2-bullet_speed**2))
+        intrcpt1 = ((-2 * closest_asteroid["dist"] * asteroid_vel * cos_my_theta2) + math.sqrt(targ_det)) / (2 * (asteroid_vel**2 -(bullet_speed+vel)**2))
+        intrcpt2 = ((-2 * closest_asteroid["dist"] * asteroid_vel * cos_my_theta2) - math.sqrt(targ_det)) / (2 * (asteroid_vel**2-(bullet_speed+vel)**2))
         
         # Take the smaller intercept time, as long as it is positive; if not, take the larger one.
         if intrcpt1 > intrcpt2:
@@ -213,13 +253,22 @@ class ScottDickController(KesslerController):
             fire = False
                
         # And return your three outputs to the game simulation. Controller algorithm complete.
-        thrust = 0.0
+        dist_from_ctrl1 = math.sqrt((ship_pos_x - 400)**2 + (ship_pos_y - 400)**2)
+        if dist_from_ctrl1 < 50:
+            print("Entered")
+            thrust = -3*(shooting.output['ship_thrust'])
+        else:
+            if bullet_t < 0.1:
+                thrust = -3*(shooting.output['ship_thrust'])
+            else:
+                thrust = shooting.output['ship_thrust']
         
         self.eval_frames +=1
         
         #DEBUG
-        print(thrust, bullet_t, shooting_theta, turn_rate, fire)
-        
+        # print(thrust, bullet_t, shooting_theta, turn_rate, fire)
+        # print("ship Thrust")
+        # print(shooting.output['ship_thrust'])
         return thrust, turn_rate, fire
 
     @property
