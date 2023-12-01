@@ -223,7 +223,7 @@ class GeneticController(KesslerController):
                
         # And return your three outputs to the game simulation. Controller algorithm complete.
         dist_from_ctrl1 = math.sqrt((ship_pos_x - 400)**2 + (ship_pos_y - 400)**2)
-        if dist_from_ctrl1 < 100:
+        if dist_from_ctrl1 < 50:
             thrust = -3*(shooting.output['ship_thrust'])
 
         if bullet_t < 0.1:
