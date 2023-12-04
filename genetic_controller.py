@@ -1,4 +1,8 @@
-from kesslergame import KesslerController # In Eclipse, the name of the library is kesslergame, not src.kesslergame
+import os
+import time
+
+from EasyGA import EasyGA
+from kesslergame import KesslerController, Scenario, KesslerGame, GraphicsType, TrainerEnvironment
 from typing import Dict, Tuple
 from cmath import sqrt
 import skfuzzy as fuzz
@@ -6,22 +10,32 @@ from skfuzzy import control as ctrl
 import math
 import numpy as np
 import matplotlib as plt
+import time
 
+from skfuzzy.control import ControlSystem
 
+from test_controller import TestController
 
 
 class GeneticController(KesslerController):
         
-    def __init__(self,chromosome):
+    def __init__(self,chromosome=None):
         super().__init__()  # Call the parent class constructor if necessary
         self.eval_frames = 0
-        self.chromosome = chromosome # change to get_value list stuff
+        if chromosome is None:
+            self.chromosome = self.optimize().gene_value_list[0]
+            self.action_control = self.setup_action_control()
+        else:
+            self.chromosome = chromosome.gene_value_list[0]
+            self.action_control = self.setup_action_control()
 
-        self.action_control = self.setup_action_control()
 
     def setup_action_control(self):
         # self.targeting_control is the targeting rulebase, which is static in this controller.      
-        # Declare variables
+        # Declare
+
+        print(self.chromosome)
+
         bullet_s = self.chromosome[0]
         bullet_m = self.chromosome[1]
         thrust_l = self.chromosome[2]
@@ -35,8 +49,6 @@ class GeneticController(KesslerController):
         turn_z = self.chromosome[10]
         turn_ps = self.chromosome[11]
         turn_pl = self.chromosome[12]
-
-
 
         bullet_time = ctrl.Antecedent(np.arange(0,1.0,0.002), 'bullet_time')
         theta_delta = ctrl.Antecedent(np.arange(-1*math.pi,math.pi,0.1), 'theta_delta') # Radians due to Python
@@ -102,29 +114,35 @@ class GeneticController(KesslerController):
         action_control = ctrl.ControlSystem(rules)
 
         return action_control
-    
-        
+
+
+    def optimize(self):
+
+        database_path = '/content/database.db'
+        journal_path = '/content/database.db-journal'
+        if os.path.exists(database_path):
+            # If it exists, delete the file
+            os.remove(database_path)
+        if os.path.exists(journal_path):
+            # If it exists, delete the file
+            os.remove(journal_path)
+        ga = EasyGA.GA()
+        ga.gene_impl = lambda: generate_chromosome()
+        ga.chromosome_length = 1
+        ga.population_size = 2
+        ga.target_fitness_type = 'max'
+        ga.generation_goal = 5
+        ga.fitness_function_impl = fitness
+        ga.evolve()
+        ga.print_best_chromosome()
+        y = ga.population[0]
+
+        return y
 
     def actions(self, ship_state: Dict, game_state: Dict) -> Tuple[float, float, bool]:
         """
         Method processed each time step by this controller.
         """
-        # These were the constant actions in the basic demo, just spinning and shooting.
-        #thrust = 0 <- How do the values scale with asteroid velocity vector?
-        #turn_rate = 90 <- How do the values scale with asteroid velocity vector?
-        
-        # Answers: Asteroid position and velocity are split into their x,y components in a 2-element ?array each.
-        # So are the ship position and velocity, and bullet position and velocity. 
-        # Units appear to be meters relative to origin (where?), m/sec, m/sec^2 for thrust.
-        # Everything happens in a time increment: delta_time, which appears to be 1/30 sec; this is hardcoded in many places.
-        # So, position is updated by multiplying velocity by delta_time, and adding that to position.
-        # Ship velocity is updated by multiplying thrust by delta time.
-        # Ship position for this time increment is updated after the the thrust was applied.
-        
-
-        # My demonstration controller does not move the ship, only rotates it to shoot the nearest asteroid.
-        # Goal: demonstrate processing of game state, fuzzy controller, intercept computation 
-        # Intercept-point calculation derived from the Law of Cosines, see notes for details and citation.
 
         # Find the closest asteroid (disregards asteroid velocity)
         ship_pos_x = ship_state["position"][0]     # See src/kesslergame/ship.py in the KesslerGame Github
@@ -136,8 +154,12 @@ class GeneticController(KesslerController):
         print("Ship Velocity %f" %vel)
         print("Ship is heading %f" %heading)
 
-        
-        thrust = ship_state["speed"]
+        if vel == 0:
+            vel = 0+0.000000000001
+
+        if heading == 90:
+            heading == 90-0.00000000001
+
 
         for a in game_state["asteroids"]:
             #Loop through all asteroids, find minimum Eudlidean distance
@@ -153,14 +175,6 @@ class GeneticController(KesslerController):
                     closest_asteroid["aster"] = a
                     closest_asteroid["dist"] = curr_dist
 
-        # closest_asteroid is now the nearest asteroid object. 
-        # Calculate intercept time given ship & asteroid position, asteroid velocity vector, bullet speed (not direction).
-        # Based on Law of Cosines calculation, see notes.
-        
-        # Side D of the triangle is given by closest_asteroid.dist. Need to get the asteroid-ship direction
-        #    and the angle of the asteroid's current movement.
-        # REMEMBER TRIG FUNCTIONS ARE ALL IN RADAINS!!!
-        
         
         asteroid_ship_x = ship_pos_x - closest_asteroid["aster"]["position"][0]
         asteroid_ship_y = ship_pos_y - closest_asteroid["aster"]["position"][1]
@@ -206,6 +220,8 @@ class GeneticController(KesslerController):
         shooting_theta = (shooting_theta + math.pi) % (2 * math.pi) - math.pi
         
         # Pass the inputs to the rulebase and fire it
+        print(isinstance(self.action_control, ControlSystem))
+        print(self.action_control)
         shooting = ctrl.ControlSystemSimulation(self.action_control,flush_after_run=1)
         
         shooting.input['bullet_time'] = bullet_t
@@ -235,10 +251,75 @@ class GeneticController(KesslerController):
         
         #DEBUG
         print(thrust, bullet_t, shooting_theta, turn_rate, fire)
-        # print("ship Thrust")
-        # print(shooting.output['ship_thrust'])
+
         return thrust, turn_rate, fire
 
     @property
     def name(self) -> str:
         return "Genetic Controller"
+
+
+def fitness(chromosome):
+    my_test_scenario = Scenario(name='Test Scenario', num_asteroids=5,
+                                ship_states=[{'position': (400, 400), 'angle': 90, 'lives': 3, 'team': 1},
+                                             {'position': (600, 400), 'angle': 90, 'lives': 3, 'team': 2},
+                                             ],
+                                map_size=(1000, 800),
+                                time_limit=60,
+                                ammo_limit_multiplier=0,
+                                stop_if_no_ammo=False)
+    game_settings = {'perf_tracker': True,
+                     'graphics_type': GraphicsType.Tkinter,
+                     'realtime_multiplier': 1,
+                     'graphics_obj': None}
+    game = TrainerEnvironment(settings=game_settings)
+    controller = GeneticController(chromosome)
+    score, perf_data = game.run(scenario=my_test_scenario, controllers=[TestController(), controller])
+
+    return score.teams[1].accuracy
+
+
+def generate_chromosome():
+    l_bt = np.random.uniform(0, 0.05)
+    m_bt = np.random.uniform(0.03, 0.07)
+
+    l_th = np.random.uniform(0, 100)
+    m_th = np.random.uniform(60, 140)
+    h_th = np.random.uniform(100, 200)
+
+    theta_n = np.random.uniform(0, math.pi / 3)
+
+    ship_n = np.random.uniform(25, 45)
+
+    low_bullet_time = [0, 0, l_bt]
+    medium_bullet_time = [0, m_bt, 0.1]
+    # we set bullet_tim_high using smf
+    low_thrust = [0, 0, l_th]
+    medium_thrust = [0, m_th, 200]
+    high_thrust = [h_th, 200, 200]
+
+    NS_theta = [-math.pi / 3, -theta_n, 0]
+    Z_theta = [-theta_n, 0, theta_n]
+    PS_theta = [0, theta_n, math.pi / 3]
+
+    turn_nl = [-180, -180, -ship_n]
+    turn_ns = [-3 * ship_n, -ship_n, 0]
+    turn_z = [-ship_n, 0, ship_n]
+    turn_ps = [0, ship_n, ship_n * 3]
+    turn_pl = [ship_n, 180, 180]
+    chromosome = [
+        low_bullet_time,
+        medium_bullet_time,
+        low_thrust,
+        medium_thrust,
+        high_thrust,
+        NS_theta,
+        Z_theta,
+        PS_theta,
+        turn_nl,
+        turn_ns,
+        turn_z,
+        turn_ps,
+        turn_pl
+    ]
+    return chromosome

@@ -2,10 +2,9 @@
 # NOTICE: This file is subject to the license agreement defined in file 'LICENSE', which is part of
 # this source code package.
 import time
-from kesslergame import Scenario, KesslerGame, GraphicsType
+from kesslergame import Scenario, KesslerGame, GraphicsType, TrainerEnvironment
 from test_controller import TestController
 from genetic_controller import GeneticController
-from genetic_alg import generate_chromosome
 
 my_test_scenario = Scenario(name='Test Scenario', num_asteroids=5,
                             ship_states=[{'position': (400, 400), 'angle': 90, 'lives': 3, 'team': 1},
@@ -20,12 +19,10 @@ game_settings = {'perf_tracker': True,
                  'realtime_multiplier': 1,
                  'graphics_obj': None}
 game = KesslerGame(settings=game_settings)  # Use this to visualize the game scenario
-# game = TrainerEnvironment(settings=game_settings) # Use this for max-speed, no-graphics simulation
+#game = TrainerEnvironment(settings=game_settings) # Use this for max-speed, no-graphics simulation
 pre = time.perf_counter()
-chromosome = generate_chromosome()
-controller = GeneticController(chromosome)
-print(controller.chromosome)
-score, perf_data = game.run(scenario=my_test_scenario, controllers=[TestController(), controller])
+print("Running actual game")
+score, perf_data = game.run(scenario=my_test_scenario, controllers=[TestController(), GeneticController()])
 print('Scenario eval time: ' + str(time.perf_counter() - pre))
 print(score.stop_reason)
 print('Asteroids hit: ' + str([team.asteroids_hit for team in score.teams]))
