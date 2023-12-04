@@ -280,33 +280,43 @@ def fitness(chromosome):
 
 
 def generate_chromosome():
+    # bullet time ranges
     l_bt = np.random.uniform(0, 0.05)
     m_bt = np.random.uniform(0.03, 0.07)
 
+    # thrust ranges
     l_th = np.random.uniform(0, 100)
     m_th = np.random.uniform(60, 140)
     h_th = np.random.uniform(100, 200)
 
+    # theta number
     theta_n = np.random.uniform(0, math.pi / 3)
 
+    # ship
     ship_n = np.random.uniform(25, 45)
 
     low_bullet_time = [0, 0, l_bt]
     medium_bullet_time = [0, m_bt, 0.1]
     # we set bullet_tim_high using smf
+
+    # thrust mem functions
     low_thrust = [0, 0, l_th]
     medium_thrust = [0, m_th, 200]
     high_thrust = [h_th, 200, 200]
 
+
+    # theta mem functions
     NS_theta = [-math.pi / 3, -theta_n, 0]
     Z_theta = [-theta_n, 0, theta_n]
     PS_theta = [0, theta_n, math.pi / 3]
 
+    # ship turn mem functions
     turn_nl = [-180, -180, -ship_n]
     turn_ns = [-3 * ship_n, -ship_n, 0]
     turn_z = [-ship_n, 0, ship_n]
     turn_ps = [0, ship_n, ship_n * 3]
     turn_pl = [ship_n, 180, 180]
+
     chromosome = [
         low_bullet_time,
         medium_bullet_time,
