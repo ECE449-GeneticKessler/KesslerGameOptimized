@@ -16,6 +16,8 @@ from skfuzzy.control import ControlSystem
 
 from test_controller import TestController
 
+POPULATION_SIZE = 5
+GENERATION_GOAL = 5
 
 class GeneticController(KesslerController):
         
@@ -37,7 +39,7 @@ class GeneticController(KesslerController):
         # self.targeting_control is the targeting rulebase, which is static in this controller.      
         # Declare
 
-        print(self.chromosome)
+        # print(self.chromosome)
 
         bullet_s = self.chromosome[0]
         bullet_m = self.chromosome[1]
@@ -132,9 +134,9 @@ class GeneticController(KesslerController):
         ga = EasyGA.GA()
         ga.gene_impl = lambda: generate_chromosome()
         ga.chromosome_length = 1
-        ga.population_size = 1
+        ga.population_size = POPULATION_SIZE
         ga.target_fitness_type = 'max'
-        ga.generation_goal = 1
+        ga.generation_goal = GENERATION_GOAL
         ga.fitness_function_impl = fitness
         ga.evolve()
         ga.print_best_chromosome()
@@ -154,8 +156,8 @@ class GeneticController(KesslerController):
         vel = ship_state['speed']
         heading = ship_state['heading']
 
-        print("Ship Velocity %f" %vel)
-        print("Ship is heading %f" %heading)
+        # print("Ship Velocity %f" %vel)
+        # print("Ship is heading %f" %heading)
 
         # if vel == 0:
         #     vel = 0+0.000000000001
@@ -223,8 +225,8 @@ class GeneticController(KesslerController):
         shooting_theta = (shooting_theta + math.pi) % (2 * math.pi) - math.pi
         
         # Pass the inputs to the rulebase and fire it
-        print(isinstance(self.action_control, ControlSystem))
-        print(self.action_control)
+        # print(isinstance(self.action_control, ControlSystem))
+        # print(self.action_control)
         shooting = ctrl.ControlSystemSimulation(self.action_control,flush_after_run=1)
         
         shooting.input['bullet_time'] = bullet_t
@@ -253,7 +255,7 @@ class GeneticController(KesslerController):
             self.eval_frames +=1
         
         #DEBUG
-        print(thrust, bullet_t, shooting_theta, turn_rate, fire)
+        # print(thrust, bullet_t, shooting_theta, turn_rate, fire)
 
         return thrust, turn_rate, fire
 
