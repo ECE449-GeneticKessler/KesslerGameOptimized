@@ -24,10 +24,13 @@ class GeneticController(KesslerController):
         self.eval_frames = 0
         if chromosome is None:
             self.chromosome = self.optimize().gene_value_list[0]
-            self.action_control = self.setup_action_control()
         else:
-            self.chromosome = chromosome.gene_value_list[0]
-            self.action_control = self.setup_action_control()
+            if type(chromosome) == EasyGA.Chromosome:
+                self.chromosome = chromosome.gene_value_list[0]
+            else:
+                self.chromosome = chromosome
+        self.action_control = self.setup_action_control()
+
 
 
     def setup_action_control(self):
@@ -58,7 +61,7 @@ class GeneticController(KesslerController):
 
         chromosome = self.chromosome
 
-        # TODO: use chromosome here to adjeust the membership functions for all of these.
+        # TODO: use chromosome here to adjust the membership functions for all of these.
         # chromosome generation based on membership functions seen here
         
         #Declare fuzzy sets for bullet_time (how long it takes for the bullet to reach the intercept point)
@@ -129,14 +132,14 @@ class GeneticController(KesslerController):
         ga = EasyGA.GA()
         ga.gene_impl = lambda: generate_chromosome()
         ga.chromosome_length = 1
-        ga.population_size = 2
+        ga.population_size = 1
         ga.target_fitness_type = 'max'
-        ga.generation_goal = 5
+        ga.generation_goal = 1
         ga.fitness_function_impl = fitness
         ga.evolve()
         ga.print_best_chromosome()
         y = ga.population[0]
-
+        
         return y
 
     def actions(self, ship_state: Dict, game_state: Dict) -> Tuple[float, float, bool]:
@@ -154,11 +157,11 @@ class GeneticController(KesslerController):
         print("Ship Velocity %f" %vel)
         print("Ship is heading %f" %heading)
 
-        if vel == 0:
-            vel = 0+0.000000000001
+        # if vel == 0:
+        #     vel = 0+0.000000000001
 
-        if heading == 90:
-            heading == 90-0.00000000001
+        # if heading == 90:
+        #     heading == 90-0.00000000001
 
 
         for a in game_state["asteroids"]:
@@ -241,13 +244,13 @@ class GeneticController(KesslerController):
         dist_from_ctrl1 = math.sqrt((ship_pos_x - 400)**2 + (ship_pos_y - 400)**2)
         if dist_from_ctrl1 < 50:
             thrust = -3*(shooting.output['ship_thrust'])
-
-        if bullet_t < 0.1:
-            thrust = -3*(shooting.output['ship_thrust'])
         else:
-            thrust = shooting.output['ship_thrust']
-        
-        self.eval_frames +=1
+            if bullet_t < 0.1:
+                thrust = -3*(shooting.output['ship_thrust'])
+            else:
+                thrust = shooting.output['ship_thrust']
+            
+            self.eval_frames +=1
         
         #DEBUG
         print(thrust, bullet_t, shooting_theta, turn_rate, fire)
@@ -302,7 +305,7 @@ def generate_chromosome():
     # thrust mem functions
     low_thrust = [0, 0, l_th]
     medium_thrust = [0, m_th, 200]
-    high_thrust = [h_th, 200, 200]
+    high_thrust = [m_th, 200, 200]
 
 
     # theta mem functions
